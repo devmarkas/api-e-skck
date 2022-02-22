@@ -14,3 +14,5 @@
 */
 
 $router->post('/login','AuthController@login');
+$router->post('/register','AuthController@register');
+$router->get('/email/verify','AuthController@verify');
