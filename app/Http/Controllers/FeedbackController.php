@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Feedback;
+use Illuminate\Support\Facades\Auth;
 use Validator;
 
 class FeedbackController extends Controller{
@@ -17,7 +18,7 @@ class FeedbackController extends Controller{
     public function save(Request $request){
 
         $validator = Validator::make($request->all(), [
-                'user_id' => 'required',
+                // 'user_id' => 'required',
                 'ulasan' => 'required',
                 'rating' => 'required',
             ], 
@@ -27,9 +28,11 @@ class FeedbackController extends Controller{
         );
 
         if ($validator->passes()) {
+            
+            $user = Auth::user();
 
             $feedback = new Feedback();
-            $feedback->user_id = $request->user_id;
+            $feedback->user_id = $user->id;
             $feedback->ulasan = $request->ulasan;
             $feedback->rating = $request->rating;
 
