@@ -118,7 +118,7 @@ class AuthController extends Controller
             return response()->json(['message'=>'Check your email'], 201);
             
         }else{
-            return response()->json(['error'=>$validator->errors()->all()], 401);
+            return response()->json(['error'=>$validator->errors()->all()], 400);
         }  
     }
 

@@ -18,3 +18,4 @@ $router->post('/register','AuthController@register');
 $router->get('/email/verify','AuthController@verify');
 
 $router->post('/feedback/save','FeedbackController@save');
+$router->post('/eskck/save','EskckController@save');

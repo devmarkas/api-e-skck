@@ -40,7 +40,7 @@ class FeedbackController extends Controller{
 
             return response()->json(['message'=>'Feedback Successfully Saved'], 200);
         } else {
-            return response()->json(['error'=>$validator->errors()->all()], 401);
+            return response()->json(['error'=>$validator->errors()->all()], 400);
         }
 
     }
