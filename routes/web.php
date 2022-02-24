@@ -19,3 +19,6 @@ $router->get('/email/verify','AuthController@verify');
 
 $router->post('/feedback/save','FeedbackController@save');
 $router->post('/eskck/save','EskckController@save');
+
+$router->post('/payment','PaymentController@payment');
+$router->post('/payment/callback','PaymentController@payCallback');
