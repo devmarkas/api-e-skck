@@ -24,6 +24,26 @@ class EskckController extends Controller{
         );
     }
 
+    public function history(){
+        $data = Skck::where('eskck.user_id', '=', Auth::user()->id)
+                    ->where('eskck.send', '=', '1')
+                    ->join('satwil', 'satwil.eskck_id', '=', 'eskck.id')
+                    ->select('eskck.created_at as tanggal_pembuatan', 'eskck.eskck_expire as masa_berlaku', 'eskck.status as status_pembayaran', 'satwil.keperluan as keperluan')
+                    ->get();
+
+        $eskck = null;
+        foreach($data as $key => $item){
+            $eskck[] = [
+                'tanggal_pembuatan' => \Carbon\Carbon::parse($item->tanggal_pembuatan)->isoFormat('DD MMMM Y'),
+                'masa_berlaku' => \Carbon\Carbon::parse($item->masa_berlaku)->isoFormat('DD MMMM Y'),
+                'status_pembayaran' => $item->status_pembayaran,
+                'keperluan' => $item->keperluan,
+            ];
+        }
+
+        return response()->json(['data'=>$eskck,'message'=>'E-SKCK Data Has Successfully retrive'], 201);
+    }
+
     public function save(Request $request){
         $validator = $this->validationInput($request);
 
