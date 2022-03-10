@@ -31,15 +31,16 @@ class AuthController extends Controller
     public function login()
     {
         $credentials = request(['email', 'password']);
+        if (! $token = auth()->attempt($credentials)) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
         $user = DB::table('users')->where('email', '=', request(['email']))->first();
 
         if($user->email_verified_at == null || $user->email_verified_at == ''){
             return response()->json(['error' => 'Email is not verified'], 401);
         }
 
-        if (! $token = auth()->attempt($credentials)) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
 
         User::where('email', '=', request(['email']))->first()->update([
             'token_id' => $token

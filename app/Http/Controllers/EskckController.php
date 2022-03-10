@@ -105,7 +105,7 @@ class EskckController extends Controller{
             $paspor = null;
         }
         
-        $kk='akte_ijazah'.time().$i.'.'.$request->kk->getClientOriginalExtension();
+        $kk='kk'.time().$i.'.'.$request->kk->getClientOriginalExtension();
         $request->kk->move($path,$kk);
         $akte_ijazah='akte_ijazah'.time().$i.'.'.$request->akte_ijazah->getClientOriginalExtension();
         $request->akte_ijazah->move($path,$akte_ijazah);
