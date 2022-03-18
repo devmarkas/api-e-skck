@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
@@ -29,30 +30,19 @@ class AuthController extends Controller
     public function login()
     {
         $credentials = request(['email', 'password']);
-<<<<<<< Updated upstream
-=======
         if (!$token = auth()->attempt($credentials)) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
->>>>>>> Stashed changes
-        $user = DB::table('users')->where('email', '=', request(['email']))->first();
-
+      $user = User::where('email', '=', request(['email']))->first();
+      
         if ($user->email_verified_at == null || $user->email_verified_at == '') {
             return response()->json(['error' => 'Email is not verified'], 401);
         }
 
-<<<<<<< Updated upstream
-        if (! $token = auth()->attempt($credentials)) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
-=======
-
-        $user = User::where('email', '=', request(['email']))->first();
         $user->update([
             'token_id' => $token
         ]);
->>>>>>> Stashed changes
 
         return $this->respondWithToken($token, $user->role);
     }
@@ -133,18 +123,10 @@ class AuthController extends Controller
             // $token = auth()->attempt($credentials);
 
             // return $this->respondWithToken($token);
-<<<<<<< Updated upstream
-            return response()->json(['message'=>'Check your email'], 201);
-            
-        }else{
-            return response()->json(['error'=>$validator->errors()->all()], 401);
-        }  
-=======
             return response()->json(['message' => 'Check your email'], 201);
         } else {
             return response()->json(['error' => $validator->errors()->all()], 400);
         }
->>>>>>> Stashed changes
     }
 
     // protected function checkEmail($request){

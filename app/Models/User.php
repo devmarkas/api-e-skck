@@ -15,6 +15,10 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
 {
     use Authenticatable, Authorizable;
 
+    protected $fillable = [
+        'token_id'
+    ];
+
     /**
      * Get the identifier that will be stored in the subject claim of the JWT.
      *
