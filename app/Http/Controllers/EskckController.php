@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\DataPribadi;
@@ -15,41 +16,45 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Validator;
 
-class EskckController extends Controller{
+class EskckController extends Controller
+{
 
     public function __construct()
     {
-        $this->middleware('auth:api', 
+        $this->middleware(
+            'auth:api',
             // ['except' => ['save']]
         );
     }
 
-    public function history(){
+    public function history()
+    {
         $data = Skck::where('eskck.user_id', '=', Auth::user()->id)
-                    ->where('eskck.send', '=', '1')
-                    ->join('satwil', 'satwil.eskck_id', '=', 'eskck.id')
-                    ->select('eskck.created_at as tanggal_pembuatan', 'eskck.eskck_expire as masa_berlaku', 'eskck.status as status_pembayaran', 'satwil.keperluan as keperluan')
-                    ->get();
+            ->where('eskck.send', '=', '1')
+            ->join('satwil', 'satwil.eskck_id', '=', 'eskck.id')
+            ->select('eskck.created_at as tanggal_pembuatan', 'eskck.eskck_expire as masa_berlaku', 'eskck.status as status_pembayaran', 'satwil.keperluan as keperluan')
+            ->paginate(10);
 
-        $eskck = null;
-        foreach($data as $key => $item){
-            $eskck[] = [
-                'tanggal_pembuatan' => \Carbon\Carbon::parse($item->tanggal_pembuatan)->isoFormat('DD MMMM Y'),
-                'masa_berlaku' => \Carbon\Carbon::parse($item->masa_berlaku)->isoFormat('DD MMMM Y'),
-                'status_pembayaran' => $item->status_pembayaran,
-                'keperluan' => $item->keperluan,
-            ];
-        }
+        // $eskck = null;
+        // foreach ($data as $key => $item) {
+        //     $eskck[] = [
+        //         'tanggal_pembuatan' => \Carbon\Carbon::parse($item->tanggal_pembuatan)->isoFormat('DD MMMM Y'),
+        //         'masa_berlaku' => \Carbon\Carbon::parse($item->masa_berlaku)->isoFormat('DD MMMM Y'),
+        //         'status_pembayaran' => $item->status_pembayaran,
+        //         'keperluan' => $item->keperluan,
+        //     ];
+        // }
 
-        return response()->json(['data'=>$eskck,'message'=>'E-SKCK Data Has Successfully retrive'], 201);
+        return response()->json(['data' => $data, 'message' => 'E-SKCK Data Has Successfully retrive'], 201);
     }
 
-    public function save(Request $request){
+    public function save(Request $request)
+    {
         $validator = $this->validationInput($request);
 
         if ($validator->passes()) {
             $eskck = $this->eskckData();
-    
+
             $this->saveSatwil($request, $eskck->id);
             $this->saveDataPribadi($request, $eskck->id);
             $this->saveKeluarga($request, $eskck->id);
@@ -59,24 +64,27 @@ class EskckController extends Controller{
             $this->saveLampiran($request, $eskck->id);
             $this->saveKeterangan($request, $eskck->id);
 
-            return response()->json(['data'=>$eskck,'message'=>'E-SKCK Form Successfully Saved'], 200);
+            return response()->json(['data' => $eskck, 'message' => 'E-SKCK Form Successfully Saved'], 200);
         } else {
-            return response()->json(['error'=>$validator->errors()->all()], 400);
+            return response()->json(['error' => $validator->errors()->all()], 400);
         }
     }
 
-    protected function eskckData(){
+    protected function eskckData()
+    {
         $eskck = new Skck();
         $eskck->user_id = Auth::user()->id;
         $eskck->send = '1';
+        $eskck->status = 'Belum Dibayar';
         $eskck->save();
 
         return $eskck;
     }
 
-    protected function saveKeterangan($request, $eskck_id){
+    protected function saveKeterangan($request, $eskck_id)
+    {
         $keterangan = new Keterangan();
-    
+
         $keterangan->eskck_id = $eskck_id;
         $keterangan->riwayat = $request->riwayat;
         $keterangan->hobi = $request->hobi;
@@ -86,37 +94,38 @@ class EskckController extends Controller{
         $keterangan->alamat_sponsor = $request->alamat_sponsor;
         $keterangan->telp_sponsor = $request->telp_sponsor;
         $keterangan->usaha_sponsor = $request->usaha_sponsor;
-        
+
         $keterangan->save();
     }
 
-    protected function saveLampiran($request, $eskck_id){
-        $i=1;
-        $path = public_path().'/images/skck';
-        $foto='foto'.time().$i.'.'.$request->foto->getClientOriginalExtension();
-        $request->foto->move($path,$foto);
-        $ktp='ktp'.time().$i.'.'.$request->ktp->getClientOriginalExtension();
-        $request->ktp->move($path,$ktp);
+    protected function saveLampiran($request, $eskck_id)
+    {
+        $i = 1;
+        $path = public_path() . '/images/skck';
+        $foto = 'foto' . time() . $i . '.' . $request->foto->getClientOriginalExtension();
+        $request->foto->move($path, $foto);
+        $ktp = 'ktp' . time() . $i . '.' . $request->ktp->getClientOriginalExtension();
+        $request->ktp->move($path, $ktp);
 
-        if($request->hasFile('paspor')){
-            $paspor='paspor'.time().$i.'.'.$request->paspor->getClientOriginalExtension();
-            $request->paspor->move($path,$paspor);
+        if ($request->hasFile('paspor')) {
+            $paspor = 'paspor' . time() . $i . '.' . $request->paspor->getClientOriginalExtension();
+            $request->paspor->move($path, $paspor);
         } else {
             $paspor = null;
         }
-        
-        $kk='kk'.time().$i.'.'.$request->kk->getClientOriginalExtension();
-        $request->kk->move($path,$kk);
-        $akte_ijazah='akte_ijazah'.time().$i.'.'.$request->akte_ijazah->getClientOriginalExtension();
-        $request->akte_ijazah->move($path,$akte_ijazah);
-        if($request->hasFile('sidik_jari')){
-            $sidik_jari='sidik_jari'.time().$i.'.'.$request->sidik_jari->getClientOriginalExtension();
-            $request->sidik_jari->move($path,$sidik_jari);
-        }else{
+
+        $kk = 'kk' . time() . $i . '.' . $request->kk->getClientOriginalExtension();
+        $request->kk->move($path, $kk);
+        $akte_ijazah = 'akte_ijazah' . time() . $i . '.' . $request->akte_ijazah->getClientOriginalExtension();
+        $request->akte_ijazah->move($path, $akte_ijazah);
+        if ($request->hasFile('sidik_jari')) {
+            $sidik_jari = 'sidik_jari' . time() . $i . '.' . $request->sidik_jari->getClientOriginalExtension();
+            $request->sidik_jari->move($path, $sidik_jari);
+        } else {
             $sidik_jari = null;
         }
 
-        $lampiran=new Lampiran();
+        $lampiran = new Lampiran();
         $lampiran->eskck_id = $eskck_id;
         $lampiran->foto = $foto;
         $lampiran->ktp = $ktp;
@@ -127,7 +136,8 @@ class EskckController extends Controller{
         $lampiran->save();
     }
 
-    protected function saveFisik($request, $eskck_id){
+    protected function saveFisik($request, $eskck_id)
+    {
         $fisik = new Fisik();
 
         $fisik->eskck_id = $eskck_id;
@@ -143,9 +153,10 @@ class EskckController extends Controller{
         $fisik->save();
     }
 
-    protected function savePidana($request, $eskck_id){
+    protected function savePidana($request, $eskck_id)
+    {
         $pidana = new Pidana();
-    
+
         $pidana->eskck_id = $eskck_id;
         $pidana->pernah_pidana = $request->perkara_pidana;
         $pidana->pidana_apa = $request->pidana_apa;
@@ -159,35 +170,37 @@ class EskckController extends Controller{
         $pidana->save();
     }
 
-    protected function savePendidikan($request, $eskck_id){
+    protected function savePendidikan($request, $eskck_id)
+    {
         $pendidikan = new Pendidikan();
 
         $pendidikan->eskck_id = $eskck_id;
         $pendidikan->sd_nama = $request->sd_nama;
-        $pendidikan->sd_provinsi = $this->getProvinsiById($request->sd_provinsi) == '' ? null:json_encode($this->getProvinsiById($request->sd_provinsi));
-        $pendidikan->sd_kota = $this->getKotaById($request->sd_kota) == '' ? null:json_encode($this->getKotaById($request->sd_kota));
+        $pendidikan->sd_provinsi = $this->getProvinsiById($request->sd_provinsi) == '' ? null : json_encode($this->getProvinsiById($request->sd_provinsi));
+        $pendidikan->sd_kota = $this->getKotaById($request->sd_kota) == '' ? null : json_encode($this->getKotaById($request->sd_kota));
         $pendidikan->sd_tahun = $request->sd_tahun;
         $pendidikan->smp_nama = $request->smp_nama;
-        $pendidikan->smp_provinsi = $this->getProvinsiById($request->smp_provinsi) == '' ? null:json_encode($this->getProvinsiById($request->smp_provinsi));
-        $pendidikan->smp_kota = $this->getKotaById($request->smp_kota) == '' ? null:json_encode($this->getKotaById($request->smp_kota));
+        $pendidikan->smp_provinsi = $this->getProvinsiById($request->smp_provinsi) == '' ? null : json_encode($this->getProvinsiById($request->smp_provinsi));
+        $pendidikan->smp_kota = $this->getKotaById($request->smp_kota) == '' ? null : json_encode($this->getKotaById($request->smp_kota));
         $pendidikan->smp_tahun = $request->smp_tahun;
         $pendidikan->sma_nama = $request->sma_nama;
-        $pendidikan->sma_provinsi = $this->getProvinsiById($request->sma_provinsi) == '' ? null:json_encode($this->getProvinsiById($request->sma_provinsi));
-        $pendidikan->sma_kota = $this->getKotaById($request->sma_kota) == '' ? null:json_encode($this->getKotaById($request->sma_kota));
+        $pendidikan->sma_provinsi = $this->getProvinsiById($request->sma_provinsi) == '' ? null : json_encode($this->getProvinsiById($request->sma_provinsi));
+        $pendidikan->sma_kota = $this->getKotaById($request->sma_kota) == '' ? null : json_encode($this->getKotaById($request->sma_kota));
         $pendidikan->sma_tahun = $request->sma_tahun;
         $pendidikan->perguruan_nama = $request->perguruan_nama;
-        $pendidikan->perguruan_provinsi = $this->getProvinsiById($request->perguruan_provinsi) == '' ? null:json_encode($this->getProvinsiById($request->perguruan_provinsi));
-        $pendidikan->perguruan_kota = $this->getKotaById($request->perguruan_kota) == '' ? null:json_encode($this->getKotaById($request->perguruan_kota));
+        $pendidikan->perguruan_provinsi = $this->getProvinsiById($request->perguruan_provinsi) == '' ? null : json_encode($this->getProvinsiById($request->perguruan_provinsi));
+        $pendidikan->perguruan_kota = $this->getKotaById($request->perguruan_kota) == '' ? null : json_encode($this->getKotaById($request->perguruan_kota));
         $pendidikan->perguruan_tahun = $request->perguruan_tahun;
 
         $pendidikan->save();
     }
 
-    protected function saveKeluarga($request, $eskck_id){
+    protected function saveKeluarga($request, $eskck_id)
+    {
         $keluarga = new Keluarga();
         $keluarga->eskck_id = $eskck_id;
-        if($request->status_perkawinan_data_pribadi == 'Kawin'){
-            $hubLokasi = $this->lokasiJson($request->hubungan_provinsi,$request->hubungan_kota, $request->hubungan_kecamatan, $request->hubungan_kelurahan);
+        if ($request->status_perkawinan_data_pribadi == 'Kawin') {
+            $hubLokasi = $this->lokasiJson($request->hubungan_provinsi, $request->hubungan_kota, $request->hubungan_kecamatan, $request->hubungan_kelurahan);
             $keluarga->hub_type = $request->hubungan_type;
             $keluarga->hub_nama = $request->hubungan_nama;
             $keluarga->hub_umur = $request->hubungan_umur;
@@ -198,8 +211,8 @@ class EskckController extends Controller{
             $keluarga->hub_lokasi = $hubLokasi;
         }
 
-        $ayahLokasi = $this->lokasiJson($request->ayah_provinsi,$request->ayah_kota, $request->ayah_kecamatan, $request->ayah_kelurahan);
-        $ibuLokasi = $this->lokasiJson($request->ibu_provinsi,$request->ibu_kota, $request->ibu_kecamatan, $request->ibu_kelurahan);
+        $ayahLokasi = $this->lokasiJson($request->ayah_provinsi, $request->ayah_kota, $request->ayah_kecamatan, $request->ayah_kelurahan);
+        $ibuLokasi = $this->lokasiJson($request->ibu_provinsi, $request->ibu_kota, $request->ibu_kecamatan, $request->ibu_kelurahan);
 
         $keluarga->ayah_nama = $request->ayah_nama;
         $keluarga->ayah_umur = $request->ayah_umur;
@@ -217,10 +230,10 @@ class EskckController extends Controller{
         $keluarga->ibu_lokasi = $ibuLokasi;
 
         $keluarga->save();
-
     }
 
-    protected function saveDataPribadi($request, $eskck_id){
+    protected function saveDataPribadi($request, $eskck_id)
+    {
 
         $provinsi = $this->getProvinsiById($request->provinsi_data_pribadi);
         $kota = $this->getKotaById($request->kota_data_pribadi);
@@ -248,7 +261,8 @@ class EskckController extends Controller{
     }
 
 
-    protected function saveSatwil($request, $eskck_id){
+    protected function saveSatwil($request, $eskck_id)
+    {
         $kecamatan = $this->getKecamatanById($request->kecamatan_satwil);
         $kelurahan = $this->getKelurahanById($request->kelurahan_satwil);
 
@@ -266,10 +280,11 @@ class EskckController extends Controller{
         $satwil->save();
     }
 
-    protected function getProvinsiById($provinsi_id){
+    protected function getProvinsiById($provinsi_id)
+    {
 
-        if($provinsi_id != null){
-            $provinsiRes = Http::get('https://dev.farizdotid.com/api/daerahindonesia/provinsi/'.$provinsi_id);
+        if ($provinsi_id != null) {
+            $provinsiRes = Http::get('https://dev.farizdotid.com/api/daerahindonesia/provinsi/' . $provinsi_id);
             $provinsi = json_decode($provinsiRes);
             return $provinsi;
         } else {
@@ -277,32 +292,36 @@ class EskckController extends Controller{
         }
     }
 
-    protected function getKotaById($kota_id){
-        if($kota_id != null){
-            $kotaRes = Http::get('https://dev.farizdotid.com/api/daerahindonesia/kota/'.$kota_id);
+    protected function getKotaById($kota_id)
+    {
+        if ($kota_id != null) {
+            $kotaRes = Http::get('https://dev.farizdotid.com/api/daerahindonesia/kota/' . $kota_id);
             $kota = json_decode($kotaRes);
-    
+
             return $kota;
         } else {
             return '';
         }
     }
 
-    protected function getKecamatanById($kecamatan_id){
-        $kecamatanRes = Http::get('https://dev.farizdotid.com/api/daerahindonesia/kecamatan/'.$kecamatan_id);
+    protected function getKecamatanById($kecamatan_id)
+    {
+        $kecamatanRes = Http::get('https://dev.farizdotid.com/api/daerahindonesia/kecamatan/' . $kecamatan_id);
         $kecamatan = json_decode($kecamatanRes);
 
         return $kecamatan;
     }
 
-    protected function getKelurahanById($kelurahan_id){
-        $kelurahanRes = Http::get('https://dev.farizdotid.com/api/daerahindonesia/kelurahan/'.$kelurahan_id);
+    protected function getKelurahanById($kelurahan_id)
+    {
+        $kelurahanRes = Http::get('https://dev.farizdotid.com/api/daerahindonesia/kelurahan/' . $kelurahan_id);
         $kelurahan = json_decode($kelurahanRes);
 
         return $kelurahan;
     }
 
-    protected function lokasiJson($provinsi_id, $kota_id, $kecamatan_id, $kelurahan_id){
+    protected function lokasiJson($provinsi_id, $kota_id, $kecamatan_id, $kelurahan_id)
+    {
         $provinsi = $this->getProvinsiById($provinsi_id);
         $kota = $this->getKotaById($kota_id);
         $kecamatan = $this->getKecamatanById($kecamatan_id);
@@ -318,7 +337,8 @@ class EskckController extends Controller{
         return json_encode($lokasi);
     }
 
-    protected function validationInput($request){
+    protected function validationInput($request)
+    {
 
         $validation = [
             'keperluan_satwil' => 'required',
@@ -371,17 +391,17 @@ class EskckController extends Controller{
             'tinggi_badan' => 'required',
             'berat_badan' => 'required',
 
-            'foto'=>'required|mimes:jpeg,jpg,png',
-            'ktp'=>'required|mimes:jpeg,jpg,png',
-            'kk'=>'required|mimes:jpeg,jpg,png',
-            'akte_ijazah'=>'required|mimes:jpeg,jpg,png',
+            'foto' => 'required|mimes:jpeg,jpg,png',
+            'ktp' => 'required|mimes:jpeg,jpg,png',
+            'kk' => 'required|mimes:jpeg,jpg,png',
+            'akte_ijazah' => 'required|mimes:jpeg,jpg,png',
 
-            'riwayat'=>'required',
-            'hobi'=>'required',
-            'email'=>'required',
+            'riwayat' => 'required',
+            'hobi' => 'required',
+            'email' => 'required',
         ];
 
-        if($request->status_perkawinan_data_pribadi == 'Kawin'){
+        if ($request->status_perkawinan_data_pribadi == 'Kawin') {
             $hub = [
                 'hubungan_type' => 'required',
                 'hubungan_nama' => 'required',

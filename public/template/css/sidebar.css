@@ -1,0 +1,49 @@
+.sidebar-heading{
+    font-size: 63px;
+    color: black;
+}
+
+.sidebar .nav-item {
+    padding: 0px 12px 0px 12px;
+}
+
+.bg-gradient-primary {
+    background-color: #fff !important;
+    background-image: none !important;
+    background-size: cover;
+
+}
+
+.sidebar-dark .nav-item .nav-link{
+    color: #3D3D3E;
+}
+
+.sidebar-dark .nav-item.active .nav-link {
+    color: #fff;
+    background: #3A57E8;
+    border-radius: 6px;
+}
+
+.sidebar-dark hr.sidebar-divider {
+    border-top: 1px solid rgb(42 42 42 / 15%) !important;
+}
+
+.sidebar hr.sidebar-divider {
+    margin: 0 0rem 0rem !important;
+}
+
+
+
+.sidebar.toggled .nav-item .nav-link img.dis,.sidebar.toggled .nav-item .nav-link img.act{
+    position: relative;
+}
+
+.sidebar.toggled .nav-item .nav-link span{
+    margin-left: -4px;
+}
+
+h3.mt-4{
+    margin-top: 0;
+}
+
+
