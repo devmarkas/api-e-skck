@@ -13,6 +13,25 @@
 |
 */
 
+<<<<<<< Updated upstream
 $router->post('/login','AuthController@login');
 $router->post('/register','AuthController@register');
 $router->get('/email/verify','AuthController@verify');
+=======
+$router->post('/login', 'AuthController@login');
+$router->post('/register', 'AuthController@register');
+$router->get('/email/verify', 'AuthController@verify');
+$router->post('/forgot-password', 'AuthController@forgot');
+$router->get('/reset-password', 'AuthController@resetpassword');
+$router->post('/save-new-password', 'AuthController@saveNewPassword');
+
+$router->post('/feedback/save', 'FeedbackController@save');
+$router->post('/eskck/save', 'EskckController@save');
+$router->post('/eskck/history', 'EskckController@history');
+
+$router->post('/user/profile', 'UserController@user');
+
+$router->post('/payment', 'PaymentController@payment');
+$router->post('/payment/callback', 'PaymentController@payCallback');
+$router->post('/payment/fvaUpdate', 'PaymentController@fvaUpdate');
+>>>>>>> Stashed changes
