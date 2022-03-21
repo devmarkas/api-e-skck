@@ -12,6 +12,7 @@ use App\Models\Pidana;
 use App\Models\Satwil;
 use App\Models\Skck;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Validator;
@@ -27,13 +28,65 @@ class EskckController extends Controller
         );
     }
 
+    public function search(Request $request)
+    {
+        // return $request->status_pembayaran;
+        if (Auth::user()->role != '1') {
+            return response()->json(["message" => "You can't access"], 401);
+        }
+        $data = Skck::join('satwil', 'satwil.eskck_id', '=', 'eskck.id')
+            ->join('users', 'users.id', '=', 'eskck.user_id')
+            ->when($request->tanggal_pembuatan, function ($query, $pembuatan) {
+                $query->where('eskck.created_at', '>=', $pembuatan . '23:59:59');
+            })
+            ->when($request->masa_berlaku, function ($query, $masa_berlaku) {
+                $query->where('eskck.eskck_expire', '<=', $masa_berlaku . '23:59:59')
+                    ->where('eskck.eskck_expire', '!=', '');
+            })
+            ->when($request->status_pembayaran, function ($query, $status) {
+                $query->where('eskck.status', '=', $status);
+            })
+            ->when($request->search, function ($query, $search) {
+                $query->orwhere('users.first_name', 'like', '%' . $search . '%')
+                    ->orWhere('users.last_name', 'like', '%' . $search . '%')
+                    ->orWhere('satwil.keperluan', 'like', '%' . $search . '%');
+            })
+            ->select('users.first_name as nama_pertama', 'users.last_name as nama_terakhir', 'eskck.created_at as tanggal_pembuatan', 'eskck.eskck_expire as masa_berlaku', 'eskck.status as status_pembayaran', 'satwil.keperluan as keperluan')
+            ->paginate(10);
+
+        return response()->json(["data" => $data, "message" => "E-SKCK search and filter successfully retrive"], 201);
+    }
+
+    public function keperluan()
+    {
+        $enamBulanLalu = Carbon::now()->subMonths(6);
+
+        $dataKeperluan = Skck::join('satwil', 'satwil.eskck_id', '=', 'eskck.id')
+            ->where('eskck.user_id', '=', Auth::user()->id)
+            ->where('eskck.send', '=', '1')
+            ->whereDate('eskck.updated_at', '>', $enamBulanLalu)
+            ->select('satwil.keperluan')
+            ->distinct()
+            ->get();
+
+        return response()->json(['data' => $dataKeperluan, 'message' => 'Keperluan E-SKCK Has Successfully retrive'], 201);
+    }
+
     public function history()
     {
-        $data = Skck::where('eskck.user_id', '=', Auth::user()->id)
-            ->where('eskck.send', '=', '1')
-            ->join('satwil', 'satwil.eskck_id', '=', 'eskck.id')
-            ->select('eskck.created_at as tanggal_pembuatan', 'eskck.eskck_expire as masa_berlaku', 'eskck.status as status_pembayaran', 'satwil.keperluan as keperluan')
-            ->paginate(10);
+        if (Auth::user()->role == '1') {
+            $data = Skck::where('eskck.send', '=', '1')
+                ->join('satwil', 'satwil.eskck_id', '=', 'eskck.id')
+                ->join('users', 'users.id', '=', 'eskck.user_id')
+                ->select('users.first_name as nama_pertama', 'users.last_name as nama_terakhir', 'eskck.created_at as tanggal_pembuatan', 'eskck.eskck_expire as masa_berlaku', 'eskck.status as status_pembayaran', 'satwil.keperluan as keperluan')
+                ->paginate(10);
+        } else {
+            $data = Skck::where('eskck.user_id', '=', Auth::user()->id)
+                ->where('eskck.send', '=', '1')
+                ->join('satwil', 'satwil.eskck_id', '=', 'eskck.id')
+                ->select('eskck.created_at as tanggal_pembuatan', 'eskck.eskck_expire as masa_berlaku', 'eskck.status as status_pembayaran', 'satwil.keperluan as keperluan')
+                ->paginate(10);
+        }
 
         // $eskck = null;
         // foreach ($data as $key => $item) {
@@ -46,6 +99,84 @@ class EskckController extends Controller
         // }
 
         return response()->json(['data' => $data, 'message' => 'E-SKCK Data Has Successfully retrive'], 201);
+    }
+
+    protected function lokasi($lokasi)
+    {
+        // return $lokasi != null;
+        if ($lokasi != null) {
+            $lokasiJson = json_decode($lokasi);
+            $data = json_decode(json_encode([
+                'provinsi' => $lokasiJson->provinsi->nama,
+                'kabupaten' => $lokasiJson->kota->nama,
+                'kecamatan' => $lokasiJson->kecamatan->nama,
+                'Kelurahan' => $lokasiJson->kelurahan->nama,
+            ]));
+        } else {
+            $data = json_decode(json_encode([
+                'provinsi' => '-',
+                'kabupaten' => '-',
+                'kecamatan' => '-',
+                'Kelurahan' => '-',
+            ]));
+        }
+        return $data;
+    }
+
+    protected function getNameByJson($name)
+    {
+        if ($name != null) {
+            $json = json_decode($name);
+
+            return $json->nama;
+        } else {
+            return '-';
+        }
+    }
+
+    public function detail($eskck_id)
+    {
+        $skck = Skck::find($eskck_id);
+
+        if (Auth::user()->id == $skck->user_id) {
+            $satwil = Satwil::where('eskck_id', '=', $skck->id)->first();
+            $dataPribadi = DataPribadi::where('dp_eskck_id', '=', $skck->id)->first();
+
+            $keluarga = Keluarga::where('eskck_id', '=', $skck->id)->first();
+            $keluarga->hub_lokasi = $this->lokasi($keluarga->hub_lokasi);
+            $keluarga->ayah_lokasi = $this->lokasi($keluarga->ayah_lokasi);
+            $keluarga->ibu_lokasi = $this->lokasi($keluarga->ibu_lokasi);
+
+            $pendidikan = Pendidikan::where('eskck_id', '=', $skck->id)->first();
+            $pendidikan->sd_provinsi = $this->getNameByJson($pendidikan->sd_provinsi);
+            $pendidikan->sd_kota = $this->getNameByJson($pendidikan->sd_kota);
+            $pendidikan->smp_provinsi = $this->getNameByJson($pendidikan->smp_provinsi);
+            $pendidikan->smp_kota = $this->getNameByJson($pendidikan->smp_kota);
+            $pendidikan->sma_provinsi = $this->getNameByJson($pendidikan->sma_provinsi);
+            $pendidikan->sma_kota = $this->getNameByJson($pendidikan->sma_kota);
+            $pendidikan->perguruan_provinsi = $this->getNameByJson($pendidikan->perguruan_provinsi);
+            $pendidikan->perguruan_kota = $this->getNameByJson($pendidikan->perguruan_kota);
+            $pidana = Pidana::where('eskck_id', '=', $skck->id)->first();
+            $fisik = Fisik::where('eskck_id', '=', $skck->id)->first();
+            $lampiran = Lampiran::where('eskck_id', '=', $skck->id)->first();
+            $keterangan = Keterangan::where('eskck_id', '=', $skck->id)->first();
+
+            // return $keluarga;
+
+            $data = [
+                'satwil' => $satwil,
+                'dataPribadi' => $dataPribadi,
+                'keluarga' => $keluarga,
+                'pendidikan' => $pendidikan,
+                'pidana' => $pidana,
+                'fisik' => $fisik,
+                'lampiran' => $lampiran,
+                'keterangan' => $keterangan,
+            ];
+            return response()->json(["data" => $data, "message" => "SKCK detail successfully retrive"], 201);
+        } else {
+            return response()->json(["message" => "You can't access this data"], 401);
+        }
     }
 
     public function save(Request $request)

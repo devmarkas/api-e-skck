@@ -19,12 +19,19 @@ $router->post('/forgot-password', 'AuthController@forgot');
 $router->get('/reset-password', 'AuthController@resetpassword');
 $router->post('/save-new-password', 'AuthController@saveNewPassword');
 
-$router->post('/feedback/save', 'FeedbackController@save');
 $router->post('/eskck/save', 'EskckController@save');
-$router->post('/eskck/history', 'EskckController@history');
+$router->get('/eskck/keperluan-berlaku', 'EskckController@keperluan');
+$router->get('/eskck/history', 'EskckController@history');
+$router->get('/eskck/detail/{eskck_id}', 'EskckController@detail');
 
-$router->post('/user/profile', 'UserController@user');
+$router->post('/eskck/search', 'EskckController@search');
+
+$router->get('/user/profile', 'UserController@user');
 
 $router->post('/payment', 'PaymentController@payment');
 $router->post('/payment/callback', 'PaymentController@payCallback');
 $router->post('/payment/fvaUpdate', 'PaymentController@fvaUpdate');
+
+$router->post('/feedback/save', 'FeedbackController@save');
+$router->get('/feedback/rating', 'FeedbackController@ratingApp');
+$router->post('/feedback/list', 'FeedbackController@list');
