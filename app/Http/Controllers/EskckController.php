@@ -14,6 +14,7 @@ use App\Models\Skck;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Validator;
 
@@ -78,13 +79,13 @@ class EskckController extends Controller
             $data = Skck::where('eskck.send', '=', '1')
                 ->join('satwil', 'satwil.eskck_id', '=', 'eskck.id')
                 ->join('users', 'users.id', '=', 'eskck.user_id')
-                ->select('users.first_name as nama_pertama', 'users.last_name as nama_terakhir', 'eskck.created_at as tanggal_pembuatan', 'eskck.eskck_expire as masa_berlaku', 'eskck.status as status_pembayaran', 'satwil.keperluan as keperluan')
+                ->select('eskck.id as id', 'users.first_name as nama_pertama', 'users.last_name as nama_terakhir', 'eskck.created_at as tanggal_pembuatan', 'eskck.eskck_expire as masa_berlaku', 'eskck.status as status_pembayaran', 'satwil.keperluan as keperluan')
                 ->paginate(10);
         } else {
             $data = Skck::where('eskck.user_id', '=', Auth::user()->id)
                 ->where('eskck.send', '=', '1')
                 ->join('satwil', 'satwil.eskck_id', '=', 'eskck.id')
-                ->select('eskck.created_at as tanggal_pembuatan', 'eskck.eskck_expire as masa_berlaku', 'eskck.status as status_pembayaran', 'satwil.keperluan as keperluan')
+                ->select('eskck.id as id', 'eskck.created_at as tanggal_pembuatan', 'eskck.eskck_expire as masa_berlaku', 'eskck.status as status_pembayaran', 'satwil.keperluan as keperluan')
                 ->paginate(10);
         }
 
@@ -134,11 +135,62 @@ class EskckController extends Controller
         }
     }
 
+    protected function lampiranUrl($id)
+    {
+        $lampiran = Lampiran::where('eskck_id', '=', $id)->first();
+
+        if (File::exists(public_path('images/skck/' . $lampiran->foto))) {
+            $lampiran->foto = env('API_DOMAIN') . '/images/skck/' . $lampiran->foto;
+        } else {
+            $lampiran->foto = env('WEB_DOMAIN') . '/images/skck/' . $lampiran->foto;
+        }
+
+        if (File::exists(public_path('images/skck/' . $lampiran->ktp))) {
+            $lampiran->ktp = env('API_DOMAIN') . '/images/skck/' . $lampiran->ktp;
+        } else {
+            $lampiran->ktp = env('WEB_DOMAIN') . '/images/skck/' . $lampiran->ktp;
+        }
+
+        if (File::exists(public_path('images/skck/' . $lampiran->kk))) {
+            $lampiran->kk = env('API_DOMAIN') . '/images/skck/' . $lampiran->kk;
+        } else {
+            $lampiran->kk = env('WEB_DOMAIN') . '/images/skck/' . $lampiran->kk;
+        }
+
+        if (File::exists(public_path('images/skck/' . $lampiran->akte_ijazah))) {
+            $lampiran->akte_ijazah = env('API_DOMAIN') . '/images/skck/' . $lampiran->akte_ijazah;
+        } else {
+            $lampiran->akte_ijazah = env('WEB_DOMAIN') . '/images/skck/' . $lampiran->akte_ijazah;
+        }
+
+        if ($lampiran->paspor != null) {
+            if (File::exists(public_path('images/skck/' . $lampiran->paspor))) {
+                $lampiran->paspor = env('API_DOMAIN') . '/images/skck/' . $lampiran->paspor;
+            } else {
+                $lampiran->paspor = env('WEB_DOMAIN') . '/images/skck/' . $lampiran->paspor;
+            }
+        } else {
+            $lampiran->paspor = null;
+        }
+
+        if ($lampiran->sidik_jari != null) {
+            if (File::exists(public_path('images/skck/' . $lampiran->sidik_jari))) {
+                $lampiran->sidik_jari = env('API_DOMAIN') . '/images/skck/' . $lampiran->sidik_jari;
+            } else {
+                $lampiran->sidik_jari = env('WEB_DOMAIN') . '/images/skck/' . $lampiran->sidik_jari;
+            }
+        } else {
+            $lampiran->sidik_jari = null;
+        }
+
+        return $lampiran;
+    }
+
     public function detail($eskck_id)
     {
         $skck = Skck::find($eskck_id);
 
-        if (Auth::user()->id == $skck->user_id) {
+        if (Auth::user()->id == $skck->user_id || Auth::user()->role) {
             $satwil = Satwil::where('eskck_id', '=', $skck->id)->first();
             $dataPribadi = DataPribadi::where('dp_eskck_id', '=', $skck->id)->first();
 
@@ -158,7 +210,8 @@ class EskckController extends Controller
             $pendidikan->perguruan_kota = $this->getNameByJson($pendidikan->perguruan_kota);
             $pidana = Pidana::where('eskck_id', '=', $skck->id)->first();
             $fisik = Fisik::where('eskck_id', '=', $skck->id)->first();
-            $lampiran = Lampiran::where('eskck_id', '=', $skck->id)->first();
+            // $lampiran = Lampiran::where('eskck_id', '=', $skck->id)->first();
+            $lampiran = $this->lampiranUrl($skck->id);
             $keterangan = Keterangan::where('eskck_id', '=', $skck->id)->first();
 
             // return $keluarga;
