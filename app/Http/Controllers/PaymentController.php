@@ -48,7 +48,7 @@ class PaymentController extends Controller
 
         // dd($params);
 
-        Xendit::setApiKey('xnd_development_TTMpE5gZsDk3dTF3T2X30sTHFshDL7CR4oGALGVipJSt8tceSvPuSmTNJGehN1C');
+        Xendit::setApiKey(env('PAYMENT_KEY'));
         $createVA = \Xendit\VirtualAccounts::create($params);
         if ($createVA['status'] == 'PENDING') {
             $status = 'Belum Dibayar';
